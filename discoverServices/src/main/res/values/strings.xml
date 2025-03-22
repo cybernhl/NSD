@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">NSD_DiscoverServices</string>
+    <string name="next">Start</string>
+
+    <string name="lorem_ipsum">
+        Go DiscoverServices
+    </string>
+</resources>

@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">NSD_RegisterService</string>
+
+    <string name="next">Start</string>
+
+
+    <string name="lorem_ipsum">
+       Go
+    </string>
+</resources>
