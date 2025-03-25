@@ -2,7 +2,9 @@ package com.deepseek.chat.developer.android
 
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 
 class NsdRegistrationHelper private constructor(private val nsdManager: NsdManager) {
     private var registrationListener: NsdManager.RegistrationListener? = null
@@ -24,11 +26,19 @@ class NsdRegistrationHelper private constructor(private val nsdManager: NsdManag
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
     fun registerService(name: String = "NsdChat", tyep: String = "_nsdchat._tcp", port: Int) {
+        val attributes =
+            mutableMapOf<String, Any>("path" to "index.html", "key2" to 2, "key3" to true)
         val serviceInfo = NsdServiceInfo().apply {
             serviceName = name
             serviceType = tyep
             setPort(port)
+            if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                attributes.forEach { key,value->
+                    setAttribute(key, value.toString())
+                }
+            }
         }
 
         registrationListener = object : NsdManager.RegistrationListener {

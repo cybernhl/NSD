@@ -2,7 +2,9 @@ package com.deepseek.chat.developer.android
 
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -49,7 +51,38 @@ class NsdDiscoveryHelper private constructor(private val nsdManager: NsdManager)
 
                     serviceInfo.serviceName.contains(serviceName) -> nsdManager.resolveService(
                         serviceInfo,
-                        resolveListener
+                        object : NsdManager.ResolveListener {
+                            override fun onResolveFailed(
+                                serviceInfo: NsdServiceInfo,
+                                errorCode: Int
+                            ) {
+                                // Called when the resolve fails. Use the error code to debug.
+                                Log.e("NSD", "Resolve failed: $errorCode")
+                            }
+
+                            @RequiresApi(Build.VERSION_CODES.N)
+                            override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
+                                Log.e("NSD", "Resolve Succeeded. $serviceInfo")
+                                val port: Int = serviceInfo.port
+                                val host: InetAddress = serviceInfo.host
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                    serviceInfo.attributes.asSequence().forEach { (key, value) ->
+                                        Log.e(
+                                            "NSD", "Resolve attribute key : $key value : ${
+                                                try {
+                                                    String(value, Charsets.UTF_8)
+                                                } catch (e: CharacterCodingException) {
+                                                    "Invalid UTF-8 sequence"
+                                                }
+                                            }"
+                                        )
+                                    }
+                                }
+                                scope.launch {
+                                    _discoveredServices.emit(serviceInfo)
+                                }
+                            }
+                        }
                     )
                 }
             }
@@ -63,32 +96,22 @@ class NsdDiscoveryHelper private constructor(private val nsdManager: NsdManager)
             }
 
             override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-                Log.e("NSD", "Discovery Start failed  serviceType $serviceType errorCode : $errorCode")
+                Log.e(
+                    "NSD",
+                    "Discovery Start failed  serviceType $serviceType errorCode : $errorCode"
+                )
 //                nsdManager.stopServiceDiscovery(this)
             }
 
             override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
-                Log.e("NSD", "Stop discovery Failed serviceType $serviceType errorCode : $errorCode")
+                Log.e(
+                    "NSD",
+                    "Stop discovery Failed serviceType $serviceType errorCode : $errorCode"
+                )
 //                nsdManager.stopServiceDiscovery(this)
             }
         }
         nsdManager.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
-    }
-
-    private val resolveListener = object : NsdManager.ResolveListener {
-        override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-            // Called when the resolve fails. Use the error code to debug.
-            Log.e("NSD", "Resolve failed: $errorCode")
-        }
-
-        override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-            val port: Int = serviceInfo.port
-            val host: InetAddress = serviceInfo.host
-            Log.e("NSD", "Resolve Succeeded. $serviceInfo  ")
-            scope.launch {
-                _discoveredServices.emit(serviceInfo)
-            }
-        }
     }
 
     fun shutdown() {
